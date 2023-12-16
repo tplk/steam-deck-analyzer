@@ -29,7 +29,7 @@ local json = require 'deps.json'
 -- 620 Portal 2
 
 --- @alias Database { name: string, url: string }
---- @alias Config { database: { update_interval: number, steam: Database } }
+--- @alias Config { cache_path: string, database: { update_interval: number, steam: Database } }
 
 --- @type Config
 local config = {
