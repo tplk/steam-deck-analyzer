@@ -43,16 +43,57 @@ local config = {
   },
 }
 
+--- @alias LogFn fun(message: string): nil
+--- @type { debug: LogFn, log: LogFn, warn: LogFn, error: LogFn }
+local logger = {
+  debug = function(message)
+    print('Debug: ' .. message)
+  end,
+  log = function(message)
+    print(message)
+  end,
+  warn = function(message)
+    print('Warning: ' .. message)
+  end,
+  error = function(message)
+    print('Error: ' .. message)
+  end,
+}
 
---- @return boolean, Error?
+--- @param path string
+--- @return boolean
+local function file_exists(path)
+  local file = io.open(path, 'r')
+
+  if file == nil then
+    return false
+  end
+
+  file:close()
+
+  return true
+end
+
+--- @param path string
+--- @return boolean
+local function is_directory(path)
+  if os.execute('test -d ' .. path) then
+    return true
+  else
+    return false
+  end
+end
+
+
+--- @return Error?
 local function init_file_system()
   local cache_path = config.cache_path
 
   if not os.execute('mkdir -p ' .. cache_path) then
-    return false, 'Failed to create cache directory at ' .. cache_path
+    return 'Failed to create cache directory at ' .. cache_path
   end
 
-  return true
+  return nil
 end
 
 --- @param database Database
@@ -76,12 +117,12 @@ local function is_database_up_to_date(database)
 end
 
 --- @param database Database
---- @return boolean, string?
+--- @return Error?
 local function update_steam_database(database)
   local response = io.popen('curl -s ' .. database.url)
 
   if response == nil then
-    return false, 'Failed to fetch ' .. database.url
+    return 'Failed to fetch ' .. database.url
   end
 
   local json_data = response:read('*all')
@@ -90,20 +131,20 @@ local function update_steam_database(database)
   json_data = nil
 
   if data == nil then
-    return false, 'Failed to decode json data'
+    return 'Failed to decode json data'
   end
 
   local apps = data.applist.apps
 
   if apps == nil then
-    return false, 'Failed to find apps in json data'
+    return 'Failed to find apps in json data'
   end
 
   local database_path = config.cache_path .. '/' .. database.name
   local database_file = io.open(database_path, 'w')
 
   if database_file == nil then
-    return false, 'Failed to open file ' .. database_path
+    return 'Failed to open file ' .. database_path
   end
 
   local current_time = os.time()
@@ -112,8 +153,7 @@ local function update_steam_database(database)
 
   for _, app in ipairs(apps) do
     if app.appid == nil or app.name == nil then
-      print('Error: invalid app data')
-      print(json.encode(app))
+      logger.debug('Invalid app data\n' .. json.encode(app))
       goto continue
     end
 
@@ -124,16 +164,28 @@ local function update_steam_database(database)
 
   database_file:close()
 
-  return true
+  return nil
 end
 
 
 local function main()
-  init_file_system()
+  local err
+
+  err = init_file_system()
+  if err then
+    logger.error(err)
+    os.exit(1)
+  end
 
   if not is_database_up_to_date(config.database.steam) then
-    print('Database is outdated. Updating...')
-    update_steam_database(config.database.steam)
+    logger.debug('Database is outdated. Updating...')
+    err = update_steam_database(config.database.steam)
+    if err then
+      logger.error(err)
+      os.exit(1)
+    end
+  else
+    logger.debug('Database up to date.')
   end
 end
 
