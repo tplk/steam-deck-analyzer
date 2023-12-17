@@ -33,7 +33,7 @@ local json = require 'deps.json'
 
 --- @type Config
 local config = {
-  cache_path = script_path() .. '/cache',
+  cache_path = script_path() .. '/.cache',
   database = {
     update_interval = 60 * 60 * 24,
     steam = {
