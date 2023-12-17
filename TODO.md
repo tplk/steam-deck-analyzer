@@ -1,0 +1,4 @@
+- Parse vdf shortcuts for Non-Steam app names.
+- Save Non-Steam app names into a database since shortcuts lost after removing app from Steam.
+- Run in background to collect Non-Steam app names (both in game and desktop modes?).
+- Show duplicate directories on device/external drive.
